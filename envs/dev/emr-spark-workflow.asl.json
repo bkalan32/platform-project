@@ -1,0 +1,65 @@
+{
+  "Comment": "Run PySpark on EMR and shut down",
+  "StartAt": "Create Cluster",
+  "States": {
+    "Create Cluster": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::elasticmapreduce:createCluster.sync",
+      "Parameters": {
+        "Name": "emr-spark-pipeline",
+        "ReleaseLabel": "emr-6.15.0", 
+        "Applications": [{ "Name": "Spark" }],
+        "Instances": {
+          "InstanceGroups": [
+            {
+              "InstanceRole": "MASTER",
+              "InstanceType": "m5.xlarge",
+              "InstanceCount": 1
+            },
+            {
+              "InstanceRole": "CORE",
+              "InstanceType": "m5.xlarge",
+              "InstanceCount": 2
+            }
+          ],
+          "KeepJobFlowAliveWhenNoSteps": true,
+          "Ec2SubnetId": "subnet-0c52bb90f9a3d37b0"
+        },
+        "LogUri": "s3://kalan-emr-logs-dev/emr-logs",
+        "JobFlowRole": "emr-role-dev-profile",
+        "ServiceRole": "arn:aws:iam::831926603642:role/emr-service-role-dev",
+        "VisibleToAllUsers": true
+      },
+      "ResultPath": "$.ClusterInfo",
+      "Next": "Submit PySpark Step"
+    },
+    "Submit PySpark Step": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::elasticmapreduce:addStep.sync",
+      "Parameters": {
+        "ClusterId.$": "$.ClusterInfo.ClusterId",
+        "Step": {
+          "Name": "PySpark Job",
+          "ActionOnFailure": "CONTINUE",
+          "HadoopJarStep": {
+            "Jar": "command-runner.jar",
+            "Args": [
+              "spark-submit",
+              "s3://kalan-emr-logs-dev/scripts/wordcount.py"
+            ]
+          }
+        }
+      },
+      "ResultPath": "$.StepInfo",
+      "Next": "Terminate Cluster"
+    },
+    "Terminate Cluster": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::elasticmapreduce:terminateCluster.sync",
+      "Parameters": {
+        "ClusterId.$": "$.ClusterInfo.ClusterId"
+      },
+      "End": true
+    }
+  }
+}

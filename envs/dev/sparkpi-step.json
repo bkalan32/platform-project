@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "SparkPi",
+    "ActionOnFailure": "CONTINUE",
+    "Type": "CUSTOM_JAR",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "spark-submit",
+      "--deploy-mode",
+      "cluster",
+      "--class",
+      "org.apache.spark.examples.SparkPi",
+      "/usr/lib/spark/examples/jars/spark-examples.jar",
+      "10"
+    ]
+  }
+]
+
+

@@ -1,0 +1,12 @@
+[
+  {
+    "Name": "WordCount PySpark",
+    "ActionOnFailure": "CONTINUE",
+    "Type": "CUSTOM_JAR",
+    "Jar": "command-runner.jar",
+    "Args": [
+      "spark-submit",
+      "s3://kalan-emr-logs-dev/scripts/wordcount.py"
+    ]
+  }
+]
