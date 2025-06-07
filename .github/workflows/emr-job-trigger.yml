@@ -1,0 +1,31 @@
+name: Trigger EMR Job on Script Push
+
+on:
+  push:
+    paths:
+      - 'scripts/**'
+    branches:
+      - main
+
+jobs:
+  submit-emr-step:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      EMR_CLUSTER_ID: ${{ secrets.EMR_CLUSTER_ID }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check for Cluster ID
+        if: env.EMR_CLUSTER_ID == ''
+        run: echo "No EMR_CLUSTER_ID set. Skipping job submission."
+
+      - name: Submit PySpark Job to EMR
+        if: env.EMR_CLUSTER_ID != ''
+        run: |
+          aws emr add-steps \
+            --cluster-id ${{ env.EMR_CLUSTER_ID }} \
+            --steps file://scripts/wordcount-step.json
+
