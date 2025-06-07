@@ -17,3 +17,4 @@ for word, count in word_counts.collect():
 
 spark.stop()
 
+# Retry trigger
