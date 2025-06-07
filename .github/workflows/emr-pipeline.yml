@@ -1,0 +1,51 @@
+name: Deploy and Trigger EMR Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy Infra + Run PySpark
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.6.6
+
+    - name: Init Terraform
+      working-directory: envs/dev
+      run: terraform init
+
+    - name: Validate Terraform
+      working-directory: envs/dev
+      run: terraform validate
+
+    - name: Apply Terraform
+      working-directory: envs/dev
+      run: terraform apply -auto-approve
+
+    - name: Upload PySpark script to S3
+      run: |
+        aws s3 cp wordcount.py s3://kalan-emr-logs-dev/scripts/wordcount.py
+
+    - name: Trigger Step Function Execution
+      run: |
+        aws stepfunctions start-execution \
+          --state-machine-arn arn:aws:states:${{ secrets.AWS_REGION }}:831926603642:stateMachine:emr-spark-pipeline \
+          --name run-$(date +%s)
